@@ -12,14 +12,12 @@ logger = get_logger(__name__)
 # Global mapping of model names to their context window sizes (in tokens)
 # More specific names should come first, because we take the first one that matches a prefix
 MODEL_CONTEXT_WINDOWS = {
-    # OpenAI
-    "gpt-5": 400_000,
-    # Anthropic
+    # Anthropic Claude 4.5 family
+    "claude-opus-4-5": 200_000,
+    "claude-sonnet-4-5": 200_000,  # Can be extended to 1M with beta header
+    "claude-haiku-4-5": 200_000,
+    # Anthropic Claude 4 family (legacy)
     "claude-sonnet-4": 200_000,
-    # Google
-    "gemini-2.5-flash-lite": 1_000_000,
-    "gemini-2.5-flash": 1_000_000,
-    "gemini-2.5-pro": 1_000_000,
 }
 
 
@@ -97,12 +95,16 @@ class ProviderPreferences(BaseModel):
         return [
             ModelOption(
                 provider="anthropic",
-                model_name="claude-sonnet-4-20250514",
+                model_name="claude-sonnet-4-5-20250514",
             ),
             ModelOption(
-                provider="openai",
-                model_name="gpt-5",
-                reasoning_effort="low",
+                provider="anthropic",
+                model_name="claude-sonnet-4-5-20250514",
+                reasoning_effort="medium",
+            ),
+            ModelOption(
+                provider="anthropic",
+                model_name="claude-haiku-4-5-20250514",
             ),
         ]
 
@@ -111,9 +113,8 @@ class ProviderPreferences(BaseModel):
         """Models that can be used for chat if the user provides their own API key."""
         return [
             ModelOption(
-                provider="google",
-                model_name="gemini-2.5-flash-lite",
-                reasoning_effort="low",
+                provider="anthropic",
+                model_name="claude-opus-4-5-20250514",
             ),
         ]
 
@@ -393,12 +394,19 @@ class ProviderPreferences(BaseModel):
         """Judge models that any user can access without providing their own API key"""
 
         return [
-            ModelOption(provider="openai", model_name="gpt-5", reasoning_effort="medium"),
-            ModelOption(provider="openai", model_name="gpt-5", reasoning_effort="low"),
-            ModelOption(provider="openai", model_name="gpt-5-mini", reasoning_effort="medium"),
             ModelOption(
                 provider="anthropic",
-                model_name="claude-sonnet-4-20250514",
+                model_name="claude-sonnet-4-5-20250514",
+                reasoning_effort="medium",
+            ),
+            ModelOption(
+                provider="anthropic",
+                model_name="claude-sonnet-4-5-20250514",
+                reasoning_effort="low",
+            ),
+            ModelOption(
+                provider="anthropic",
+                model_name="claude-haiku-4-5-20250514",
                 reasoning_effort="medium",
             ),
         ]
@@ -410,8 +418,8 @@ class ProviderPreferences(BaseModel):
 
         return [
             ModelOption(
-                provider="google",
-                model_name="gemini-2.5-flash",
+                provider="anthropic",
+                model_name="claude-opus-4-5-20250514",
                 reasoning_effort="medium",
             ),
         ]

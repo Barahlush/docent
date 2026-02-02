@@ -62,14 +62,8 @@ const createEventSource = (
   // Define the error handler
   eventSource.onerror = (error) => {
     console.error('EventSource error:', error);
-    // dispatch(
-    //   setToastNotification({
-    //     title: 'Connection error',
-    //     description: 'Server-sent event connection failed',
-    //     variant: 'destructive',
-    //   })
-    // );
-    // closeConnection();
+    // Close connection on error to prevent infinite reconnection attempts
+    closeConnection();
   };
 
   // Function to close the connection and clean up
