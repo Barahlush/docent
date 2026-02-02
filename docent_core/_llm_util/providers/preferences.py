@@ -18,6 +18,7 @@ MODEL_CONTEXT_WINDOWS = {
     "claude-haiku-4-5": 200_000,
     # Anthropic Claude 4 family (legacy)
     "claude-sonnet-4": 200_000,
+    "claude-opus-4": 200_000,
 }
 
 
@@ -95,16 +96,16 @@ class ProviderPreferences(BaseModel):
         return [
             ModelOption(
                 provider="anthropic",
-                model_name="claude-sonnet-4-5-20250514",
+                model_name="claude-sonnet-4-5-20250929",
             ),
             ModelOption(
                 provider="anthropic",
-                model_name="claude-sonnet-4-5-20250514",
+                model_name="claude-sonnet-4-5-20250929",
                 reasoning_effort="medium",
             ),
             ModelOption(
                 provider="anthropic",
-                model_name="claude-haiku-4-5-20250514",
+                model_name="claude-haiku-4-5-20251001",
             ),
         ]
 
@@ -114,7 +115,7 @@ class ProviderPreferences(BaseModel):
         return [
             ModelOption(
                 provider="anthropic",
-                model_name="claude-opus-4-5-20250514",
+                model_name="claude-opus-4-5-20251101",
             ),
         ]
 
@@ -396,17 +397,17 @@ class ProviderPreferences(BaseModel):
         return [
             ModelOption(
                 provider="anthropic",
-                model_name="claude-sonnet-4-5-20250514",
+                model_name="claude-sonnet-4-5-20250929",
                 reasoning_effort="medium",
             ),
             ModelOption(
                 provider="anthropic",
-                model_name="claude-sonnet-4-5-20250514",
+                model_name="claude-sonnet-4-5-20250929",
                 reasoning_effort="low",
             ),
             ModelOption(
                 provider="anthropic",
-                model_name="claude-haiku-4-5-20250514",
+                model_name="claude-haiku-4-5-20251001",
                 reasoning_effort="medium",
             ),
         ]
@@ -419,7 +420,7 @@ class ProviderPreferences(BaseModel):
         return [
             ModelOption(
                 provider="anthropic",
-                model_name="claude-opus-4-5-20250514",
+                model_name="claude-opus-4-5-20251101",
                 reasoning_effort="medium",
             ),
         ]
