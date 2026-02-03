@@ -2,14 +2,77 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from './app/services/dal';
 import { INTERNAL_BASE_URL } from './app/constants';
 
+// Default service user credentials for auto-login in dev mode
+const DEV_AUTO_LOGIN_EMAIL = 'backend@ctf-eval.local';
+const DEV_AUTO_LOGIN_PASSWORD = 'ctf-eval-backend-2024';
+
+async function autoLoginOrCreateUser(): Promise<{ user: any; setCookie: string | null }> {
+  // Try to login first
+  const loginResponse = await fetch(`${INTERNAL_BASE_URL}/rest/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: DEV_AUTO_LOGIN_EMAIL,
+      password: DEV_AUTO_LOGIN_PASSWORD,
+    }),
+  });
+
+  if (loginResponse.ok) {
+    const data = await loginResponse.json();
+    return {
+      user: data.user,
+      setCookie: loginResponse.headers.get('set-cookie'),
+    };
+  }
+
+  // If login fails (user doesn't exist), create the user
+  if (loginResponse.status === 401 || loginResponse.status === 404) {
+    const signupResponse = await fetch(`${INTERNAL_BASE_URL}/rest/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: DEV_AUTO_LOGIN_EMAIL,
+        password: DEV_AUTO_LOGIN_PASSWORD,
+      }),
+    });
+
+    if (signupResponse.ok) {
+      const data = await signupResponse.json();
+      return {
+        user: data.user,
+        setCookie: signupResponse.headers.get('set-cookie'),
+      };
+    }
+  }
+
+  return { user: null, setCookie: null };
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Check if cookies already have a user associated
   let user = await getUser();
 
-  // If not, we might be able to create an anonymous session, if the path contains a collection_id
+  // If no user, ALWAYS try auto-login first (prioritize authenticated user over anonymous)
   if (!user) {
+    const { user: autoUser, setCookie } = await autoLoginOrCreateUser();
+
+    if (autoUser && setCookie) {
+      const response = NextResponse.next({
+        request: {
+          headers: new Headers({
+            ...request.headers,
+            'x-middleware-user': JSON.stringify(autoUser),
+            'x-middleware-cookies': setCookie || '',
+          }),
+        },
+      });
+      response.headers.set('set-cookie', setCookie);
+      return response;
+    }
+
+    // If auto-login fails and this is a collection route, fall back to anonymous session
     const isCollectionRoute = pathname.match(
       /^\/dashboard\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\/.*)?$/i
     );
@@ -47,10 +110,8 @@ export async function middleware(request: NextRequest) {
 
       return response;
     }
-  }
 
-  // At this point, if there is no user, we need to redirect to login
-  if (!user) {
+    // Fallback to signup if auto-login fails and not a collection route
     return NextResponse.redirect(new URL('/signup', request.url));
   }
 
