@@ -22,7 +22,11 @@ from docent.data_models.citation import (
 from docent.data_models.remove_invalid_citation_ranges import remove_invalid_citation_ranges
 from docent_core._llm_util.data_models.llm_output import LLMOutput
 from docent_core._llm_util.prod_llms import get_llm_completions_async
-from docent_core._llm_util.providers.preferences import PROVIDER_PREFERENCES, ModelOption
+from docent_core._llm_util.providers.preferences import (
+    PROVIDER_PREFERENCES,
+    ModelOption,
+    get_context_window_for_model,
+)
 from docent_core._server._broker.redis_client import (
     STATE_KEY_FORMAT,
     STREAM_KEY_FORMAT,
@@ -422,9 +426,22 @@ class ChatService:
             if sqla_rubric:
                 rubric = sqla_rubric.to_pydantic()
 
-        # Create system prompt
+        # Calculate available tokens for transcript based on model's context window
+        if sqla_session.chat_model is not None:
+            session_model = ModelOption.model_validate(sqla_session.chat_model)
+            model_context = get_context_window_for_model(session_model.model_name)
+        else:
+            model_context = 200_000  # default
+
+        # Reserve tokens for: output (8192) + chat messages (~10K) + template overhead (~2K)
+        max_transcript_tokens = model_context - 20_000
+
+        # Create system prompt with truncation limit
         system_prompt = make_system_prompt(
-            agent_run=agent_run, judge_result=judge_result, rubric=rubric
+            agent_run=agent_run,
+            judge_result=judge_result,
+            rubric=rubric,
+            max_transcript_tokens=max_transcript_tokens,
         )
 
         # Create context messages

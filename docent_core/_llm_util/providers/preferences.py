@@ -14,12 +14,29 @@ logger = get_logger(__name__)
 MODEL_CONTEXT_WINDOWS = {
     # Anthropic Claude 4.5 family
     "claude-opus-4-5": 200_000,
+    "claude-sonnet-4-5-1m": 1_000_000,  # 1M context with beta header
     "claude-sonnet-4-5": 200_000,  # Can be extended to 1M with beta header
+    "claude-sonnet-4-1m": 1_000_000,  # 1M context with beta header
+    "claude-sonnet-4": 200_000,
     "claude-haiku-4-5": 200_000,
     # Anthropic Claude 4 family (legacy)
-    "claude-sonnet-4": 200_000,
     "claude-opus-4": 200_000,
 }
+
+
+def get_context_window_for_model(model_name: str) -> int:
+    """Get context window size for a model name.
+
+    Args:
+        model_name: The model name to look up (e.g., "claude-sonnet-4-5-1m-20250929")
+
+    Returns:
+        The context window size in tokens, or 100_000 as default fallback
+    """
+    for prefix, context_window in MODEL_CONTEXT_WINDOWS.items():
+        if model_name.startswith(prefix):
+            return context_window
+    return 100_000  # default fallback
 
 
 class ModelOption(BaseModel):
@@ -96,7 +113,7 @@ class ProviderPreferences(BaseModel):
         return [
             ModelOption(
                 provider="anthropic",
-                model_name="claude-sonnet-4-5-20250929",
+                model_name="claude-sonnet-4-5-1m-20250929",  # 1M context (beta)
             ),
             ModelOption(
                 provider="anthropic",

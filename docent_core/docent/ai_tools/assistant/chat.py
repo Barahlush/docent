@@ -121,9 +121,31 @@ Label text should defend the USER and ANALYST's positions in the context of the 
 
 
 def make_system_prompt(
-    agent_run: AgentRun, judge_result: JudgeResult | None, rubric: Rubric | None
+    agent_run: AgentRun,
+    judge_result: JudgeResult | None,
+    rubric: Rubric | None,
+    max_transcript_tokens: int | None = None,
 ) -> str:
-    truncated_transcript = sanitize_pg_text(agent_run.to_text_new(indent=2))
+    """Create a system prompt for chat with the transcript.
+
+    Args:
+        agent_run: The agent run containing the transcript
+        judge_result: Optional judge result for rubric-based analysis
+        rubric: Optional rubric for structured evaluation
+        max_transcript_tokens: Optional limit on transcript tokens. If specified,
+            the transcript will be truncated to fit within this limit.
+
+    Returns:
+        The formatted system prompt string
+    """
+    raw_transcript = sanitize_pg_text(agent_run.to_text_new(indent=2))
+
+    # Apply truncation if limit specified
+    if max_transcript_tokens is not None:
+        truncated_transcript = truncate_to_token_limit(raw_transcript, max_transcript_tokens)
+    else:
+        truncated_transcript = raw_transcript
+
     if judge_result is not None and rubric is not None:
         return JUDGE_RESULT_CHAT_SYSTEM_PROMPT_TEMPLATE.format(
             transcript=truncated_transcript,

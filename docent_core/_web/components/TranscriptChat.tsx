@@ -167,7 +167,7 @@ export default function TranscriptChat({
     return longerContextAvailable
       ? 'Context window exceeded. Try a different model.'
       : 'Context window exceeded.';
-  }, [errorMessage, estimatedInputTokens, availableChatModels, shownChatModel]);
+  }, [errorMessage, estimatedInputTokens, availableChatModels, selectedChatModel]);
 
   // Wrap sendMessage to include the selected chat model
   const onSendMessage = useCallback(

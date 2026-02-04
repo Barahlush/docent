@@ -62,6 +62,25 @@ from docent_core._llm_util.providers.common import (
 
 logger = get_logger(__name__)
 
+# Beta header for 1M context window
+CONTEXT_1M_BETA = "context-1m-2025-08-07"
+
+
+def _is_1m_context_model(model_name: str) -> tuple[bool, str]:
+    """Check if model requests 1M context and return the actual API model name.
+
+    Args:
+        model_name: The model name, possibly with -1m suffix
+
+    Returns:
+        Tuple of (is_1m_context, actual_model_name)
+    """
+    if "-1m-" in model_name:
+        # e.g., "claude-sonnet-4-5-1m-20250929" -> "claude-sonnet-4-5-20250929"
+        actual_name = model_name.replace("-1m-", "-")
+        return True, actual_name
+    return False, model_name
+
 
 def _print_backoff_message(e: Details):
     logger.warning(
@@ -212,29 +231,42 @@ async def get_anthropic_chat_completion_streaming_async(
             "We have not implemented logprobs or top_logprobs for Anthropic yet."
         )
 
+    # Check if 1M context is requested
+    use_1m_context, actual_model_name = _is_1m_context_model(model_name)
+
     system, input_messages = _parse_chat_messages(messages)
     input_tools = _parse_tools(tools) if tools else NOT_GIVEN
 
+    # Common parameters for both regular and beta API
+    create_params = {
+        "model": actual_model_name,
+        "messages": input_messages,
+        "thinking": (
+            {
+                "type": "enabled",
+                "budget_tokens": reasoning_budget(max_new_tokens, reasoning_effort),
+            }
+            if reasoning_effort
+            else NOT_GIVEN
+        ),
+        "tools": input_tools,
+        "tool_choice": _parse_tool_choice(tool_choice) or NOT_GIVEN,
+        "max_tokens": max_new_tokens,
+        "temperature": temperature,
+        "system": system if system is not None else NOT_GIVEN,
+        "stream": True,
+    }
+
     try:
         async with async_timeout_ctx(timeout):
-            stream = await client.messages.create(
-                model=model_name,
-                messages=input_messages,
-                thinking=(
-                    {
-                        "type": "enabled",
-                        "budget_tokens": reasoning_budget(max_new_tokens, reasoning_effort),
-                    }
-                    if reasoning_effort
-                    else NOT_GIVEN
-                ),
-                tools=input_tools,
-                tool_choice=_parse_tool_choice(tool_choice) or NOT_GIVEN,
-                max_tokens=max_new_tokens,
-                temperature=temperature,
-                system=system if system is not None else NOT_GIVEN,
-                stream=True,
-            )
+            if use_1m_context:
+                # Use beta API for 1M context window
+                stream = await client.beta.messages.create(
+                    **create_params,
+                    betas=[CONTEXT_1M_BETA],
+                )
+            else:
+                stream = await client.messages.create(**create_params)
 
             llm_output_partial = None
             async for chunk in stream:
@@ -397,28 +429,41 @@ async def get_anthropic_chat_completion_async(
             "We have not implemented logprobs or top_logprobs for Anthropic yet."
         )
 
+    # Check if 1M context is requested
+    use_1m_context, actual_model_name = _is_1m_context_model(model_name)
+
     system, input_messages = _parse_chat_messages(messages)
     input_tools = _parse_tools(tools) if tools else NOT_GIVEN
 
+    # Common parameters for both regular and beta API
+    create_params = {
+        "model": actual_model_name,
+        "messages": input_messages,
+        "thinking": (
+            {
+                "type": "enabled",
+                "budget_tokens": reasoning_budget(max_new_tokens, reasoning_effort),
+            }
+            if reasoning_effort
+            else NOT_GIVEN
+        ),
+        "tools": input_tools,
+        "tool_choice": _parse_tool_choice(tool_choice) or NOT_GIVEN,
+        "max_tokens": max_new_tokens,
+        "temperature": temperature,
+        "system": system if system is not None else NOT_GIVEN,
+    }
+
     try:
         async with async_timeout_ctx(timeout):
-            raw_output = await client.messages.create(
-                model=model_name,
-                messages=input_messages,
-                thinking=(
-                    {
-                        "type": "enabled",
-                        "budget_tokens": reasoning_budget(max_new_tokens, reasoning_effort),
-                    }
-                    if reasoning_effort
-                    else NOT_GIVEN
-                ),
-                tools=input_tools,
-                tool_choice=_parse_tool_choice(tool_choice) or NOT_GIVEN,
-                max_tokens=max_new_tokens,
-                temperature=temperature,
-                system=system if system is not None else NOT_GIVEN,
-            )
+            if use_1m_context:
+                # Use beta API for 1M context window
+                raw_output = await client.beta.messages.create(
+                    **create_params,
+                    betas=[CONTEXT_1M_BETA],
+                )
+            else:
+                raw_output = await client.messages.create(**create_params)
 
             output = parse_anthropic_completion(raw_output, model_name)
             if output.first and output.first.finish_reason == "length" and output.first.no_text:
