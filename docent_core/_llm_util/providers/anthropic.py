@@ -298,7 +298,7 @@ FINISH_REASON_MAP: dict[str, FinishReasonType] = {
 
 def update_llm_output(
     llm_output_partial: LLMOutputPartial | None,
-    chunk: RawMessageStreamEvent,
+    chunk,  # Accept both regular and Beta stream event types via duck typing
 ):
     """
     Note that Anthropic only allows one message to be streamed at a time.
@@ -317,9 +317,10 @@ def update_llm_output(
         cur_text, cur_reasoning_tokens, cur_finish_reason, cur_model = None, None, None, None
         cur_tool_calls = None
 
-    if isinstance(chunk, RawMessageStartEvent):
+    # Use chunk.type for duck typing to support both regular and Beta API stream events
+    if chunk.type == "message_start":
         cur_model = chunk.message.model
-    elif isinstance(chunk, RawContentBlockStartEvent):
+    elif chunk.type == "content_block_start":
         # If a tool_use block starts, initialize a ToolCallPartial slot using the block index
         content_block = chunk.content_block
         if content_block.type == "tool_use":
@@ -336,12 +337,13 @@ def update_llm_output(
                 arguments_raw="",
                 type="function",
             )
-    elif isinstance(chunk, RawContentBlockDeltaEvent):
-        if isinstance(chunk.delta, TextDelta):
+    elif chunk.type == "content_block_delta":
+        # Use hasattr for duck typing to support both regular and Beta delta types
+        if hasattr(chunk.delta, "text"):  # TextDelta
             cur_text = (cur_text or "") + chunk.delta.text
-        elif isinstance(chunk.delta, ThinkingDelta):
+        elif hasattr(chunk.delta, "thinking"):  # ThinkingDelta
             cur_reasoning_tokens = (cur_reasoning_tokens or "") + chunk.delta.thinking
-        elif isinstance(chunk.delta, InputJSONDelta):
+        elif hasattr(chunk.delta, "partial_json"):  # InputJSONDelta
             # Append streamed JSON into the corresponding ToolCallPartial
             index = chunk.index
             if (
@@ -360,16 +362,16 @@ def update_llm_output(
                     arguments_raw=(cur_tool_calls[index].arguments_raw or "") + chunk.delta.partial_json,  # type: ignore[union-attr]
                     type="function",
                 )
-        elif isinstance(chunk.delta, SignatureDelta):
+        elif hasattr(chunk.delta, "signature"):  # SignatureDelta
             logger.debug(
                 "Anthropic streamed thinking signature block; we should support this soon."
             )
         else:
             raise ValueError(f"Unsupported delta type: {type(chunk.delta)}")
-    elif isinstance(chunk, RawContentBlockStopEvent):
+    elif chunk.type == "content_block_stop":
         # Nothing to do on stop; tool call is considered assembled once stop occurs
         pass
-    elif isinstance(chunk, RawMessageDeltaEvent):
+    elif chunk.type == "message_delta":
         if stop_reason := chunk.delta.stop_reason:
             cur_finish_reason = FINISH_REASON_MAP.get(stop_reason)
         # These token counts are cumulative
