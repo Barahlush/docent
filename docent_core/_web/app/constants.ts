@@ -5,10 +5,7 @@
  * For example, this is required for the Docker Compose setup.
  */
 
-export const BASE_URL = process.env.NEXT_PUBLIC_API_HOST;
-if (!BASE_URL) {
-  throw new Error('NEXT_PUBLIC_API_HOST is not set');
-}
+export const BASE_URL = process.env.NEXT_PUBLIC_API_HOST ?? '';
 export const INTERNAL_BASE_URL =
   process.env.NEXT_PUBLIC_INTERNAL_API_HOST || BASE_URL;
 

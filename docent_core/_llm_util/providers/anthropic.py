@@ -79,6 +79,10 @@ def _is_1m_context_model(model_name: str) -> tuple[bool, str]:
         # e.g., "claude-sonnet-4-5-1m-20250929" -> "claude-sonnet-4-5-20250929"
         actual_name = model_name.replace("-1m-", "-")
         return True, actual_name
+    if model_name.endswith("-1m"):
+        # e.g., "claude-opus-4-6-1m" -> "claude-opus-4-6"
+        actual_name = model_name[:-3]
+        return True, actual_name
     return False, model_name
 
 

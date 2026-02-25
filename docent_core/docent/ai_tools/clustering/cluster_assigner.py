@@ -141,6 +141,16 @@ class LlmApiClusterAssigner(ClusterAssigner):
             model_options=PROVIDER_PREFERENCES.cluster_assign_gemini_flash,
         )
 
+    @classmethod
+    def from_opus_4_6(cls, assign_prompt_fn: Callable[[str, str], str] | None = None):
+        return cls(
+            system_prompt=None,
+            max_new_tokens=8192,
+            temperature=1.0,
+            model_options=PROVIDER_PREFERENCES.cluster_assign_opus_4_6,
+            assign_prompt_fn=assign_prompt_fn,
+        )
+
     async def assign(
         self,
         items: list[str],
@@ -190,7 +200,7 @@ class LlmApiClusterAssigner(ClusterAssigner):
 
 
 BaseAssignerType = Literal[
-    "o3-mini", "o4-mini", "sonnet-4-thinking", "modernbert-ft", "gemini-flash"
+    "o3-mini", "o4-mini", "sonnet-4-thinking", "modernbert-ft", "gemini-flash", "opus-4-6"
 ]
 BASE_ASSIGNERS: dict[BaseAssignerType, ClusterAssigner] = {}
 
@@ -208,6 +218,8 @@ async def _get_base_assigner(backend: BaseAssignerType) -> ClusterAssigner:
             assigner = LlmApiClusterAssigner.from_sonnet_4_thinking()
         elif backend == "gemini-flash":
             assigner = LlmApiClusterAssigner.from_gemini_flash()
+        elif backend == "opus-4-6":
+            assigner = LlmApiClusterAssigner.from_opus_4_6()
         else:
             raise ValueError(f"Unknown backend: {backend}")
 
@@ -248,4 +260,4 @@ async def assign_with_backend(
     return await assigner.assign(items, clusters, assignment_callback)
 
 
-DEFAULT_ASSIGNER: AssignerType = "o4-mini"
+DEFAULT_ASSIGNER: AssignerType = "opus-4-6"

@@ -1,5 +1,6 @@
 import enum
 import json
+import re
 from typing import Any, Protocol, cast
 from uuid import uuid4
 
@@ -17,6 +18,51 @@ from docent_core._llm_util.prod_llms import MessagesInput, get_llm_completions_a
 from docent_core._llm_util.providers.preferences import PROVIDER_PREFERENCES, ModelOption
 
 logger = get_logger(__name__)
+
+# Regex to match ```json ... ``` or ``` ... ``` code blocks
+_CODE_BLOCK_RE = re.compile(r"```(?:json)?\s*\n?(.*?)\n?\s*```", re.DOTALL)
+
+
+def _extract_json(text: str) -> dict[str, Any] | list[Any] | None:
+    """Extract and parse JSON from LLM text that may be wrapped in markdown code blocks.
+
+    Tries in order:
+    1. Direct json.loads on stripped text
+    2. Extract from markdown code blocks (```json ... ```)
+    3. Find first { or [ and parse from there
+
+    Returns parsed JSON or None if extraction fails.
+    """
+    stripped = text.strip()
+    if not stripped:
+        return None
+
+    # 1. Try direct parse
+    try:
+        return json.loads(stripped)
+    except json.JSONDecodeError:
+        pass
+
+    # 2. Try extracting from markdown code blocks
+    match = _CODE_BLOCK_RE.search(stripped)
+    if match:
+        try:
+            return json.loads(match.group(1).strip())
+        except json.JSONDecodeError:
+            pass
+
+    # 3. Try finding the first JSON object or array
+    for i, ch in enumerate(stripped):
+        if ch in "{[":
+            try:
+                return json.loads(stripped[i:])
+            except json.JSONDecodeError:
+                pass
+            break
+
+    logger.warning(f"Failed to extract JSON from LLM output (first 200 chars): {stripped[:200]}")
+    return None
+
 
 RUBRIC_RESULT_EXPLANATION_INSTRUCTIONS = """
 - Outside of citations, do not refer to transcript numbers or block numbers.
@@ -196,7 +242,7 @@ def _get_llm_callback(
 ):
     async def _llm_callback(batch_index: int, llm_output: LLMOutput):
         text = llm_output.first_text
-        output = json.loads(text) if text else None
+        output = _extract_json(text) if text else None
 
         # Return nothing if the LLM call failed (hence None)
         if output is None:
@@ -283,7 +329,7 @@ async def evaluate_rubric(
 
     ans: list[dict[str, Any] | None] = [None] * len(prompt_resolvers)
     for i, output in enumerate(outputs):
-        parsed_output = json.loads(output.first_text) if output.first_text else None
+        parsed_output = _extract_json(output.first_text) if output.first_text else None
         if isinstance(parsed_output, dict):
             parsed_output = cast(dict[str, Any], parsed_output)
             ans[i] = _validate_rubric_output(parsed_output, rubric.output_schema, agent_runs[i])

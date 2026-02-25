@@ -12,6 +12,9 @@ logger = get_logger(__name__)
 # Global mapping of model names to their context window sizes (in tokens)
 # More specific names should come first, because we take the first one that matches a prefix
 MODEL_CONTEXT_WINDOWS = {
+    # Anthropic Claude 4.6 family
+    "claude-opus-4-6-1m": 1_000_000,  # 1M context with beta header
+    "claude-opus-4-6": 200_000,  # Can be extended to 1M with beta header
     # Anthropic Claude 4.5 family
     "claude-opus-4-5": 200_000,
     "claude-sonnet-4-5-1m": 1_000_000,  # 1M context with beta header
@@ -132,6 +135,14 @@ class ProviderPreferences(BaseModel):
         return [
             ModelOption(
                 provider="anthropic",
+                model_name="claude-opus-4-6",
+            ),
+            ModelOption(
+                provider="anthropic",
+                model_name="claude-opus-4-6-1m",
+            ),
+            ModelOption(
+                provider="anthropic",
                 model_name="claude-opus-4-5-20251101",
             ),
         ]
@@ -193,18 +204,12 @@ class ProviderPreferences(BaseModel):
         return [
             ModelOption(
                 provider="anthropic",
-                model_name="claude-sonnet-4-20250514",
+                model_name="claude-sonnet-4-5-20250929",
                 reasoning_effort="low",
             ),
             ModelOption(
-                provider="google",
-                model_name="gemini-2.5-flash-preview-05-20",
-                reasoning_effort="low",
-            ),
-            ModelOption(
-                provider="openai",
-                model_name="o1",
-                reasoning_effort="low",
+                provider="anthropic",
+                model_name="claude-haiku-4-5-20251001",
             ),
         ]
 
@@ -218,18 +223,12 @@ class ProviderPreferences(BaseModel):
         return [
             ModelOption(
                 provider="anthropic",
-                model_name="claude-sonnet-4-20250514",
+                model_name="claude-sonnet-4-5-20250929",
                 reasoning_effort="low",
             ),
             ModelOption(
-                provider="google",
-                model_name="gemini-2.5-flash-preview-05-20",
-                reasoning_effort="low",
-            ),
-            ModelOption(
-                provider="openai",
-                model_name="o1",
-                reasoning_effort="low",
+                provider="anthropic",
+                model_name="claude-haiku-4-5-20251001",
             ),
         ]
 
@@ -243,18 +242,12 @@ class ProviderPreferences(BaseModel):
         return [
             ModelOption(
                 provider="anthropic",
-                model_name="claude-sonnet-4-20250514",
+                model_name="claude-sonnet-4-5-20250929",
                 reasoning_effort="medium",
             ),
             ModelOption(
-                provider="google",
-                model_name="gemini-2.5-flash-preview-05-20",
-                reasoning_effort="medium",
-            ),
-            ModelOption(
-                provider="openai",
-                model_name="o1",
-                reasoning_effort="medium",
+                provider="anthropic",
+                model_name="claude-haiku-4-5-20251001",
             ),
         ]
 
@@ -386,6 +379,21 @@ class ProviderPreferences(BaseModel):
         ]
 
     @cached_property
+    def cluster_assign_opus_4_6(self) -> list[ModelOption]:
+        """Get model options for the cluster_assign_opus_4_6 function.
+
+        Returns:
+            List of configured model options for this function.
+        """
+        return [
+            ModelOption(
+                provider="anthropic",
+                model_name="claude-opus-4-6",
+                reasoning_effort="medium",
+            ),
+        ]
+
+    @cached_property
     def handle_refinement_message(self) -> list[ModelOption]:
         """Get model options for the handle_refinement_message function.
         Returns:
@@ -397,14 +405,10 @@ class ProviderPreferences(BaseModel):
                 model_name="gpt-5",
                 reasoning_effort="low",
             ),
-            # ModelOption(
-            #     provider="openai",
-            #     model_name="gpt-4.1",
-            # ),
-            # ModelOption(
-            #     provider="anthropic",
-            #     model_name="claude-sonnet-4-20250514",
-            # ),
+            ModelOption(
+                provider="anthropic",
+                model_name="claude-sonnet-4-20250514",
+            ),
         ]
 
     @cached_property
@@ -412,6 +416,16 @@ class ProviderPreferences(BaseModel):
         """Judge models that any user can access without providing their own API key"""
 
         return [
+            ModelOption(
+                provider="anthropic",
+                model_name="claude-opus-4-6",
+                reasoning_effort="medium",
+            ),
+            ModelOption(
+                provider="anthropic",
+                model_name="claude-opus-4-6-1m",
+                reasoning_effort="medium",
+            ),
             ModelOption(
                 provider="anthropic",
                 model_name="claude-sonnet-4-5-20250929",
@@ -435,6 +449,16 @@ class ProviderPreferences(BaseModel):
         expensive, or our rate limits are low"""
 
         return [
+            ModelOption(
+                provider="anthropic",
+                model_name="claude-opus-4-6",
+                reasoning_effort="medium",
+            ),
+            ModelOption(
+                provider="anthropic",
+                model_name="claude-opus-4-6-1m",
+                reasoning_effort="medium",
+            ),
             ModelOption(
                 provider="anthropic",
                 model_name="claude-opus-4-5-20251101",
